@@ -1,0 +1,235 @@
+==========
+Args:Namespace(config_file='vit_base_ics_288.yml', opts=[], dataset='regdb_rgb', batch_size=64, workers=4, height=288, width=144, num_instances=16, eps=0.6, eps_gap=0.02, k1=3, k2=1, arch='agw', features=0, dropout=0, momentum=0.99, trial=1, lr=0.00035, weight_decay=0.0005, epochs=1, iters=50, step_size=20, seed=1, print_freq=10, eval_step=1, temp=0.05, data_dir='/data2/liuweiqi/home/project1/data', logs_dir='./logs/regdb_train/1', pooling_type='gem', use_hard=False, no_cam=False, warmup_step=0, milestones=[20, 40])
+==========
+Loaded configuration file vit_base_ics_288.yml
+
+MODEL:
+  PRETRAIN_PATH: './vit_base_ics_cfs_lup.pth'
+  PRETRAIN_HW_RATIO: 2
+  METRIC_LOSS_TYPE: 'triplet'
+  IF_LABELSMOOTH: 'off'
+  IF_WITH_CENTER: 'no'
+  NAME: 'transformer'
+  NO_MARGIN: True
+  # DEVICE_ID: ('3')
+  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
+  STRIDE_SIZE: [16, 16]
+  STEM_CONV: True # False for vanilla ViT-S
+  GEM_POOLING: False
+  # DIST_TRAIN: True
+  SIE_COE: 3.0
+INPUT:
+  SIZE_TRAIN: [288, 144] #[384, 128] #[288, 144] #
+  SIZE_TEST: [288, 144] # [384, 128] #  [288, 144] #
+  PROB: 0.5 # random horizontal flip
+  RE_PROB: 0.5 # random erasing
+  PADDING: 10
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+
+# DATASETS:
+#   NAMES: ('market1501')
+#   ROOT_DIR: ('/home/michuan.lh/datasets')
+
+# DATALOADER:
+#   SAMPLER: 'softmax_triplet'
+#   NUM_INSTANCE: 4
+#   NUM_WORKERS: 8
+
+SOLVER:
+  OPTIMIZER_NAME: 'SGD'
+  MAX_EPOCHS: 120
+  BASE_LR: 0.0004
+  WARMUP_EPOCHS: 20
+  IMS_PER_BATCH: 64
+  WARMUP_METHOD: 'cosine'
+  LARGE_FC_LR: False
+  CHECKPOINT_PERIOD: 120
+  LOG_PERIOD: 20
+  EVAL_PERIOD: 120
+  WEIGHT_DECAY:  1e-4
+  WEIGHT_DECAY_BIAS: 1e-4
+  BIAS_LR_FACTOR: 2
+
+TEST:
+  EVAL: True
+  IMS_PER_BATCH: 256
+  RE_RANKING: False
+  WEIGHT: ''
+  NECK_FEAT: 'before'
+  FEAT_NORM: 'yes'
+
+# OUTPUT_DIR: '../../log/transreid/market/vit_base_ics_cfs_lup_384'
+
+==> Load unlabeled dataset
+=> regdb_ir loaded 1
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   200 |      200 |         1
+  query    |   191 |      191 |         1
+  gallery  |   191 |      191 |         1
+  ----------------------------------------
+=> regdb_rgb loaded 1
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   200 |      400 |         1
+  query    |   191 |      382 |         1
+  gallery  |   191 |      382 |         1
+  ----------------------------------------
+using Transformer_type: vit_base_patch16_224_TransReID as a backbone
+using stride: [16, 16], and patch number is num_y18 * num_x9
+using stride: [16, 16], and patch number is num_y18 * num_x9
+Resized position embedding from size:torch.Size([1, 129, 768]) to size: torch.Size([1, 163, 768]) with height:18 width: 9
+Load 172 / 203 layers.
+===========building transformer===========
+None
+IR Clustering criterion: eps: 0.300
+RGB Clustering criterion: eps: 0.300
+==> Create pseudo labels for unlabeled RGB data
+total time: 0.03385496139526367
+==> Create pseudo labels for unlabeled IR data
+total time: 0.03934645652770996
+Computing jaccard distance...
+Jaccard distance computing time cost: 0.267092227935791
+Computing jaccard distance...
+Jaccard distance computing time cost: 0.16670632362365723
+args.momentum 0.99
+==> Statistics for RGB epoch 0: 18 clusters outlier 363 
+==> Statistics for IR epoch 0: 167 clusters outlier 0 
+tensor([ 58, 138, 155,  50,  21,  63, 128,  19,  95, 126,  88, 116,  30,   9,
+        118,  36,  36,  36,  36,  36,  36,  36,  36,  36,  36,  36,  36,  36,
+         36,  36,  36,  99], device='cuda:0')
+tensor([152, 181, 244, 280, 156,  12,  12,  12,  12,  12,  12,  12,  12,  12,
+         12,  12,  12,  12,  12,  12,  12, 278, 373,  74, 119,  88, 185, 254,
+         49, 197,  51, 206], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+        12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(2.2245, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(6.0069, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([150,  66,  17,  26, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119,
+        119, 119, 119, 119, 119, 119,  67,  64,  40,  10,  60,  60,  60,  60,
+         60,  60,  60,  60], device='cuda:0')
+tensor([ 32,  45,  86, 341, 301, 299, 335, 367, 194,  65, 302,  39, 303, 274,
+        360, 332, 153,  53,  27,  13,  13,  13,  13,  13,  13,  13,  13,  13,
+         13,  13,  13,  13], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(3.3543, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(6.5277, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([ 60,  60,  60,  60,  60,  60,  60,  60,  46, 152,  84, 141,  87, 125,
+         62, 157,  81,  75,  61,   3,  54,  22,  93,  31,  34, 115,  77,  27,
+         78,  82, 153, 153], device='cuda:0')
+tensor([ 13,  13,  13, 259,  91,  18, 275, 342, 263, 234, 314,  11,  11,  11,
+         11,  11,  11,  11,  11,  11,  11,  11,  11,  11,  11,  11,  11, 190,
+        109,  29, 116,  84], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 11, 11, 11, 11, 11, 11, 11,
+        11, 11, 11, 11, 11, 11, 11, 11, 11, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(2.0201, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(4.0806, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153,
+        144,  72,  57,  89,   0,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+          1,   1,   1,   1], device='cuda:0')
+tensor([165, 368, 309, 106, 376, 317, 379, 340, 218, 322, 284, 338,  67,  69,
+         72, 279, 215, 243,  20,   6,   6,   6,   6,   6,   6,   6,   6,   6,
+          6,   6,   6,   6], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6],
+       device='cuda:0')
+tensor(1.3618, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(4.6939, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([  1,   1,   1,  51,  39,  65, 166,  70,  96,  20, 131,  37,  48,  24,
+        159, 120,  98, 161, 143,  90,  41, 140, 134,  91, 110, 137,   2,   2,
+          2,   2,   2,   2], device='cuda:0')
+tensor([  6,   6,   6,  36, 137, 168,  21, 102, 333, 361, 337,  60, 357, 179,
+        262, 151, 377,  96,  41,  58, 319,   8,   8,   8,   8,   8,   8,   8,
+          8,   8,   8,   8], device='cuda:0')
+tensor([ 6,  6,  6, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8],
+       device='cuda:0')
+tensor(1.4133, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(3.5515, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([  2,   2,   2,   2,   2,   2,   2,   2,   2,   2,  23,  71, 122, 100,
+         94, 127,  76,  32, 162,  49,  59, 106,  69, 156, 130, 145, 147, 151,
+        164, 160,   8,   6], device='cuda:0')
+tensor([  8,   8,   8,   8,   8, 136, 110, 345, 281, 296, 380, 177, 293, 227,
+        207, 353, 270, 298, 149, 378, 273, 230,  70, 307, 313, 348, 148,  50,
+        144,  78,  31, 100], device='cuda:0')
+tensor([ 8,  8,  8,  8,  8, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(1.0898, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(2.8325, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([  6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,
+          6,  79, 102,  56,  45,  80,  33,  86,  15,  25, 154, 109, 105, 158,
+        107,  43,  11,  38], device='cuda:0')
+tensor([ 87, 261, 220, 329, 312,  17,  17,  17,  17,  17,  17,  17,  17,  17,
+         17,  17,  17,  17,  17,  17,  17, 182, 306,  30, 235, 199,  34,  63,
+        113, 172, 251,  14], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(0.5163, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(3.1460, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([ 42, 112,  13, 136,  74,  44, 123,   7,  52,  73, 101, 142,   4, 148,
+        135,  12, 124, 121, 111, 133,  18,  47, 113,  28,  92, 129,  14,  29,
+        117, 139, 114, 104], device='cuda:0')
+tensor([ 14,  14,  14,  14,  14,  14,  14,  14,  14,  14,  14,  14,  14,  14,
+         14, 134, 327, 240, 372, 277, 147, 131, 111, 374, 142, 276,  48,  71,
+        138, 375,  73, 203], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(0.3004, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(2.1537, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([  9, 144,  45,   5,  80,   8, 162,  89,  59, 110,  19,   3,  57,  72,
+         32,  82,  67, 130,   4,  65,  30,  76, 141, 160, 149,  41,  71, 153,
+        153, 153, 153, 153], device='cuda:0')
+tensor([286, 242,  80, 112, 192, 105, 222, 267, 268, 226,  79, 187,  98, 162,
+        321, 169, 176,  16,  16,  16,  16,  16,  16,  16,  16,  16,  16,  16,
+         16,  16,  16,  16], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(0.0628, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(1.5593, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 104, 150,  87,
+         21,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,
+          2,   2,   2,  62], device='cuda:0')
+tensor([ 16, 283, 370, 315,  19, 135,  54,  55,  66, 285, 256, 363, 358, 246,
+        213,   9,   9,   9,   9,   9,   9,   9,   9,   9,   9,   9,   9,   9,
+          9,   9,   9, 117], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,  9,  9,  9,
+         9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9, 13],
+       device='cuda:0')
+tensor(3.1590, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(4.4651, device='cuda:0', grad_fn=<AddBackward0>)
+Epoch: [0][10/50]	Time 0.436 (4.081)	Data 0.001 (3.378)	Loss 4.465 (3.902)	Loss sk 1.306	Loss rgb 3.159	
+tensor([111,  50,  58,  39, 115,  92, 120,  53,  22, 109, 142,  12,  63, 105,
+         10, 137,  18,  96, 101,  23, 126, 155,  31, 127,  25,  98, 159,  94,
+        154,   6,   6,   6], device='cuda:0')
+tensor([140,  77,  97, 339, 344,  68, 255,  47,  85,  26, 288,  28, 269, 292,
+         62, 158,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,
+          2,   2,   2,   2], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,  2,  2,
+         2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2],
+       device='cuda:0')
+tensor(2.6947, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(4.6101, device='cuda:0', grad_fn=<AddBackward0>)
+tensor([  6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6, 143,
+         83,  24,  91, 103,  54, 146, 129,  88,  73,  29, 116,  42, 113,  74,
+         37, 139,  69,  77], device='cuda:0')
+tensor([232,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,  15,
+         15,  15,  15, 369, 297, 208, 150, 349,  24, 204, 310, 343, 225,  83,
+        347, 223, 180, 334], device='cuda:0')
+tensor([13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+       device='cuda:0')
+tensor(0.3619, device='cuda:0', grad_fn=<NllLossBackward0>)
+tensor(2.9236, device='cuda:0', grad_fn=<AddBackward0>)

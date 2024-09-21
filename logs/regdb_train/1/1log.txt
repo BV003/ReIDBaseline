@@ -1,0 +1,39 @@
+==========
+Args:Namespace(config_file='vit_base_ics_288.yml', opts=[], dataset='regdb_rgb', batch_size=256, workers=4, height=288, width=144, num_instances=16, eps=0.6, eps_gap=0.02, k1=3, k2=1, arch='agw', features=0, dropout=0, momentum=0.99, trial=1, lr=0.00035, weight_decay=0.0005, epochs=1, iters=50, step_size=20, seed=1, print_freq=10, eval_step=1, temp=0.05, data_dir='/data2/liuweiqi/home/project1/data', logs_dir='/data2/liuweiqi/home/project1/logs/regdb_train/1', pooling_type='gem', use_hard=False, no_cam=False, warmup_step=0, milestones=[20, 40])
+==========
+==> Load unlabeled dataset
+=> regdb_ir loaded 1
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   200 |      200 |         1
+  query    |   191 |      191 |         1
+  gallery  |   191 |      191 |         1
+  ----------------------------------------
+=> regdb_rgb loaded 1
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   200 |      400 |         1
+  query    |   191 |      382 |         1
+  gallery  |   191 |      382 |         1
+  ----------------------------------------
+using Transformer_type: vit_base_patch16_224_TransReID as a backbone
+using stride: [16, 16], and patch number is num_y18 * num_x9
+using stride: [16, 16], and patch number is num_y18 * num_x9
+Resized position embedding from size:torch.Size([1, 129, 768]) to size: torch.Size([1, 163, 768]) with height:18 width: 9
+Load 172 / 203 layers.
+===========building transformer===========
+None
+IR Clustering criterion: eps: 0.300
+RGB Clustering criterion: eps: 0.300
+==> Create pseudo labels for unlabeled RGB data
+total time: 0.03797745704650879
+==> Create pseudo labels for unlabeled IR data
+total time: 0.06418800354003906
+Computing jaccard distance...
+Jaccard distance computing time cost: 0.31117796897888184
+Computing jaccard distance...
+Jaccard distance computing time cost: 0.19187664985656738
