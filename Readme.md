@@ -1,1 +1,2 @@
 ReIDBaseline
+做多模态科研的基本代码结构

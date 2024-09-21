@@ -685,9 +685,9 @@ def main_worker_stage2(args,log_name):
             args.momentum=0.1
         print('args.momentum',args.momentum)
         memory_ir = ClusterMemory(768, num_cluster_ir, temp=args.temp,
-                               momentum=args.momentum, use_hard=args.use_hard).cuda()
+                               momentum=args.momentum).cuda()
         memory_rgb = ClusterMemory(768, num_cluster_rgb, temp=args.temp,
-                               momentum=args.momentum, use_hard=args.use_hard).cuda()
+                               momentum=args.momentum).cuda()
         memory_ir.features = F.normalize(cluster_features_ir, dim=1).cuda()
         memory_rgb.features = F.normalize(cluster_features_rgb, dim=1).cuda()
 

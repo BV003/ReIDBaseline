@@ -1,5 +1,5 @@
 MODEL:
-  PRETRAIN_PATH: './vit_base_ics_cfs_lup.pth'
+  PRETRAIN_PATH: '../vit_base_ics_cfs_lup.pth'
   PRETRAIN_HW_RATIO: 2
   METRIC_LOSS_TYPE: 'triplet'
   IF_LABELSMOOTH: 'off'

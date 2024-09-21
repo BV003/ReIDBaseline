@@ -122,11 +122,13 @@ class Trainer(object):
             # forward
             _,f_out_rgb,f_out_sk,_,_,labels_rgb,labels_sk,pool_rgb,pool_sk,_,_ = self._forward(inputs_rgb,inputs_sk,label_1=labels_rgb,label_2=labels_sk,modal=0)
             # print(len(f_out_sk))
-            print(labels_sk)
+            print(f_out_sk.size())
+            print(labels_sk.size())
             loss_sk = self.memory_sk(f_out_sk, labels_sk)
             print(labels_rgb)
-            labels_rgb = torch.clamp(labels_rgb, min=1, max=13)
-            print(labels_rgb)
+            #labels_rgb = torch.clamp(labels_rgb, min=1, max=13)
+            print(f_out_rgb.size())
+            print(labels_rgb.size())
             loss_rgb = self.memory_rgb(f_out_rgb, labels_rgb)
             print(loss_rgb)# here
             loss = loss_sk+loss_rgb
