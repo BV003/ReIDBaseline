@@ -11,6 +11,8 @@ from .sysu_ir import sysu_ir
 from .sysu_rgb import sysu_rgb
 from .regdb_ir import regdb_ir
 from .regdb_rgb import regdb_rgb
+from .PKU_sk import PKU_sk
+from .PKU_rgb import PKU_rgb
 __factory = {
     'market1501': Market1501,
     'msmt17': MSMT17,
@@ -21,7 +23,9 @@ __factory = {
     'sysu_ir':sysu_ir,
     'sysu_rgb':sysu_rgb,
     'regdb_ir':regdb_ir,
-    'regdb_rgb':regdb_rgb
+    'regdb_rgb':regdb_rgb,
+    'PKU_sk':PKU_sk,
+    'PKU_rgb':PKU_rgb,
 }
 
 

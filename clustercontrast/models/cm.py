@@ -38,18 +38,13 @@ class ClusterMemory(nn.Module, ABC):
         super(ClusterMemory, self).__init__()
         self.num_features = num_features
         self.num_samples = num_samples
-
         self.momentum = momentum
         self.temp = temp
-        self.register_buffer('features', torch.zeros(num_samples, num_features))
+        self.register_buffer('features', torch.zeros(num_samples, num_features))#创建一个形状为 [num_samples, num_features] 的张量，并且将其初始化为全零
 
     def forward(self, inputs, targets):
-        
-
         inputs = F.normalize(inputs, dim=1).cuda()
         outputs = cm(inputs, targets, self.features, self.momentum)
         outputs /= self.temp
-        print("Outputs dimension:", outputs.size())
-        print("Targets dimension:", targets.size())
         loss = F.cross_entropy(outputs, targets)
         return loss
