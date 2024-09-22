@@ -252,7 +252,6 @@ def main_worker_stage(args,log_name):
 
 
     for epoch in range(args.epochs):
-        print("1")
         with torch.no_grad():
             sk_eps = 0.3
             rgb_eps = 0.3
@@ -357,7 +356,6 @@ def main_worker_stage(args,log_name):
                                 trainset=pseudo_labeled_dataset_rgb, no_cam=args.no_cam,train_transformer=train_transformer_rgb,train_transformer1=train_transformer_rgb1)
         train_loader_sk.new_epoch()
         train_loader_rgb.new_epoch()
-        print("2")
         trainer.train(epoch, train_loader_sk,train_loader_rgb, optimizer, print_freq=args.print_freq, train_iters=len(train_loader_sk))
 
     print("done")
