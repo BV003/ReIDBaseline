@@ -58,6 +58,20 @@ part=1
 torch.backends.cudnn.enable =True,
 torch.backends.cudnn.benchmark = True
 
+def process_test(img_dir, trial = 1, modal = 'visible'):
+    if modal=='visible':
+        input_data_path = img_dir + 'idx/test_visible_{}'.format(trial) + '.txt'
+    elif modal=='sk':
+        input_data_path = img_dir + 'idx/test_sketch_{}'.format(trial) + '.txt'
+    
+    with open(input_data_path) as f:
+        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        # Get full list of image and labels
+        file_image = [img_dir + '/' + s.split(' ')[0] for s in data_file_list]
+        file_label = [int(s.split(' ')[1]) for s in data_file_list]
+        
+    return file_image, np.array(file_label)
+
 def get_data(name, data_dir,trial=0):
     root = osp.join(data_dir, name)
     dataset = datasets.create(name, root,trial=trial)
@@ -103,7 +117,6 @@ def get_train_loader_rgb(args, dataset, height, width, batch_size, workers,
                        shuffle=not rmgs_flag, pin_memory=True, drop_last=True), length=iters)
     return train_loader
 
-
 def get_test_loader(dataset, height, width, batch_size, workers, testset=None,test_transformer=None):
     normalizer = T.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
@@ -122,7 +135,6 @@ def get_test_loader(dataset, height, width, batch_size, workers, testset=None,te
 
     return test_loader
 
-
 def create_model(args):
     model = models.create(args.arch, num_features=args.features, norm=True, dropout=args.dropout,
                           num_classes=0, pooling_type=args.pooling_type)
@@ -130,6 +142,147 @@ def create_model(args):
     model.cuda()
     model = nn.DataParallel(model)#,output_device=1)
     return model
+
+def process_test(img_dir, trial = 1, modal = 'visible'):
+    if modal=='visible':
+        input_data_path = img_dir + 'idx/test_visible_{}'.format(trial) + '.txt'
+    elif modal=='sk':
+        input_data_path = img_dir + 'idx/test_sketch_{}'.format(trial) + '.txt'
+    
+    with open(input_data_path) as f:
+        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        # Get full list of image and labels
+        file_image = [img_dir + '/' + s.split(' ')[0] for s in data_file_list]
+        file_label = [int(s.split(' ')[1]) for s in data_file_list]
+        
+    return file_image, np.array(file_label)
+
+def fliplr(img):
+    '''flip horizontal'''
+    inv_idx = torch.arange(img.size(3)-1,-1,-1).long()  # N x C x H x W
+    img_flip = img.index_select(3,inv_idx)
+    return img_flip
+
+def extract_gall_feat(model,gall_loader,ngall):
+    pool_dim=768*2
+    net = model
+    net.eval()
+    print ('Extracting Gallery Feature...')
+    start = time.time()
+    ptr = 0
+    gall_feat_pool = np.zeros((ngall, pool_dim))
+    gall_feat_fc = np.zeros((ngall, pool_dim))
+    with torch.no_grad():
+        for batch_idx, (input, label ) in enumerate(gall_loader):
+            batch_num = input.size(0)
+            flip_input = fliplr(input)
+            input = Variable(input.cuda())
+            feat_fc,feat_fc_s = net( input,input, 1)
+            feat_fc = torch.cat((feat_fc,feat_fc_s),dim=1)
+            flip_input = Variable(flip_input.cuda())
+            feat_fc_1,feat_fc_1_s = net( flip_input,flip_input, 1)
+            feat_fc_1 = torch.cat((feat_fc_1,feat_fc_1_s),dim=1)
+            feature_fc = (feat_fc.detach() + feat_fc_1.detach())/2
+            fnorm_fc = torch.norm(feature_fc, p=2, dim=1, keepdim=True)
+            feature_fc = feature_fc.div(fnorm_fc.expand_as(feature_fc))
+            gall_feat_fc[ptr:ptr+batch_num,: ]   = feature_fc.cpu().numpy()
+            ptr = ptr + batch_num
+    print('Extracting Time:\t {:.3f}'.format(time.time()-start))
+    return gall_feat_fc
+
+
+def extract_query_feat(model,query_loader,nquery):
+    pool_dim=768*2
+    net = model
+    net.eval()
+    print ('Extracting Query Feature...')
+    start = time.time()
+    ptr = 0
+    query_feat_pool = np.zeros((nquery, pool_dim))
+    query_feat_fc = np.zeros((nquery, pool_dim))
+    with torch.no_grad():
+        for batch_idx, (input, label ) in enumerate(query_loader):
+            batch_num = input.size(0)
+            flip_input = fliplr(input)
+            input = Variable(input.cuda())
+            feat_fc,feat_fc_s = net( input, input,2)
+            feat_fc = torch.cat((feat_fc,feat_fc_s),dim=1)
+            flip_input = Variable(flip_input.cuda())
+            feat_fc_1,feat_fc_1_s= net( flip_input,flip_input, 2)
+            feat_fc_1 = torch.cat((feat_fc_1,feat_fc_1_s),dim=1)
+            feature_fc = (feat_fc.detach() + feat_fc_1.detach())/2
+            fnorm_fc = torch.norm(feature_fc, p=2, dim=1, keepdim=True)
+            feature_fc = feature_fc.div(fnorm_fc.expand_as(feature_fc))
+            query_feat_fc[ptr:ptr+batch_num,: ]   = feature_fc.cpu().numpy()
+            
+            ptr = ptr + batch_num         
+    print('Extracting Time:\t {:.3f}'.format(time.time()-start))
+    return query_feat_fc
+
+def eval_PKU(distmat, q_pids, g_pids, max_rank = 20):
+    num_q, num_g = distmat.shape
+    if num_g < max_rank:
+        max_rank = num_g
+        print("Note: number of gallery samples is quite small, got {}".format(num_g))
+    indices = np.argsort(distmat, axis=1)
+    matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
+
+    # compute cmc curve for each query
+    all_cmc = []
+    all_AP = []
+    all_INP = []
+    num_valid_q = 0. # number of valid query
+    
+    # only two cameras
+    q_camids = np.ones(num_q).astype(np.int32)
+    g_camids = 2* np.ones(num_g).astype(np.int32)
+    
+    for q_idx in range(num_q):
+        # get query pid and camid
+        q_pid = q_pids[q_idx]
+        q_camid = q_camids[q_idx]
+
+        # remove gallery samples that have the same pid and camid with query
+        order = indices[q_idx]
+        remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
+        keep = np.invert(remove)
+
+        # compute cmc curve
+        raw_cmc = matches[q_idx][keep] # binary vector, positions with value 1 are correct matches
+        if not np.any(raw_cmc):
+            # this condition is true when query identity does not appear in gallery
+            continue
+
+        cmc = raw_cmc.cumsum()
+
+        # compute mINP
+        # refernece Deep Learning for Person Re-identification: A Survey and Outlook
+        pos_idx = np.where(raw_cmc == 1)
+        pos_max_idx = np.max(pos_idx)
+        inp = cmc[pos_max_idx]/ (pos_max_idx + 1.0)
+        all_INP.append(inp)
+
+        cmc[cmc > 1] = 1
+
+        all_cmc.append(cmc[:max_rank])
+        num_valid_q += 1.
+
+        # compute average precision
+        # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
+        num_rel = raw_cmc.sum()
+        tmp_cmc = raw_cmc.cumsum()
+        tmp_cmc = [x / (i+1.) for i, x in enumerate(tmp_cmc)]
+        tmp_cmc = np.asarray(tmp_cmc) * raw_cmc
+        AP = tmp_cmc.sum() / num_rel
+        all_AP.append(AP)
+
+    assert num_valid_q > 0, "Error: all query identities do not appear in gallery"
+
+    all_cmc = np.asarray(all_cmc).astype(np.float32)
+    all_cmc = all_cmc.sum(0) / num_valid_q
+    mAP = np.mean(all_AP)
+    mINP = np.mean(all_INP)
+    return all_cmc, mAP, mINP
 
 class Normalize(nn.Module):
     def __init__(self, power=2):
@@ -140,6 +293,28 @@ class Normalize(nn.Module):
         norm = x.pow(self.power).sum(1, keepdim=True).pow(1. / self.power)
         out = x.div(norm)
         return out
+
+class TestData(data.Dataset):
+    def __init__(self, test_img_file, test_label, transform=None, img_size = (144,288)):
+
+        test_image = []
+        for i in range(len(test_img_file)):
+            img = Image.open(test_img_file[i])
+            img = img.resize((img_size[0], img_size[1]), Image.ANTIALIAS)
+            pix_array = np.array(img)
+            test_image.append(pix_array)
+        test_image = np.array(test_image)
+        self.test_image = test_image
+        self.test_label = test_label
+        self.transform = transform
+
+    def __getitem__(self, index):
+        img1,  target1 = self.test_image[index],  self.test_label[index]
+        img1 = self.transform(img1)
+        return img1, target1
+
+    def __len__(self):
+        return len(self.test_image)
 
 def main():
     args = parser.parse_args()
@@ -156,9 +331,9 @@ def main():
     log_name = 'PKU_train'
     main_worker_stage(args,log_name) #add CMA 
 
-
 def main_worker_stage(args,log_name):
-
+    
+    start_time = time.monotonic()
     ir_batch=32
     rgb_batch=32
 
@@ -249,7 +424,23 @@ def main_worker_stage(args,log_name):
         ChannelRandomErasing(probability = 0.5),
         ChannelAdapGray(probability =0.5)
         ])
+    
+    args.test_batch=64
+    args.img_w=args.width
+    args.img_h=args.height
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+    transform_test = T.Compose([
+                T.ToPILImage(),
+                T.Resize((args.img_h,args.img_w)),
+                T.ToTensor(),
+                normalize,
+            ])
 
+    # Optimizer
+    params = [{"params": [value]} for _, value in model.named_parameters() if value.requires_grad]
+    optimizer = torch.optim.Adam(params, lr=args.lr, weight_decay=args.weight_decay)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
 
     for epoch in range(args.epochs):
         with torch.no_grad():
@@ -284,12 +475,8 @@ def main_worker_stage(args,log_name):
             
             features_sk_s = torch.cat([features_sk_s[f].unsqueeze(0) for f, _, _ in sorted(dataset_sk.train)], 0)
 
-            features_sk_s_=F.normalize(features_sk_s, dim=1)
-
             features_sk = torch.cat((features_sk,features_sk_s), 1)
             features_sk_=F.normalize(features_sk, dim=1)
-            features_sk_ori_=F.normalize(features_sk_ori, dim=1)
-            all_feature = []
             rerank_dist_sk = compute_jaccard_distance(features_sk_, k1=30, k2=args.k2,search_option=3)
             pseudo_labels_sk = cluster_sk.fit_predict(rerank_dist_sk)
             # if epoch >= trainer.cmlabel:
@@ -299,7 +486,6 @@ def main_worker_stage(args,log_name):
 
             del rerank_dist_rgb
             del rerank_dist_sk
-            pseudo_labels_all = []
             num_cluster_sk = len(set(pseudo_labels_sk)) - (1 if -1 in pseudo_labels_sk else 0)
             num_cluster_rgb = len(set(pseudo_labels_rgb)) - (1 if -1 in pseudo_labels_rgb else 0)
         cluster_features_sk = generate_cluster_features(pseudo_labels_sk, features_sk_ori)
@@ -357,6 +543,50 @@ def main_worker_stage(args,log_name):
         train_loader_sk.new_epoch()
         train_loader_rgb.new_epoch()
         trainer.train(epoch, train_loader_sk,train_loader_rgb, optimizer, print_freq=args.print_freq, train_iters=len(train_loader_sk))
+        
+        #保存结果与测试
+        if ((epoch+1)%args.eval_step==0 or (epoch==args.epochs-1)):
+            # 加载训练好的模型
+            checkpoint = load_checkpoint(osp.join(args.logs_dir, 'model_best.pth.tar'))
+            model.load_state_dict(checkpoint['state_dict'])
+            
+            data_path='/data2/liuweiqi/home/project1/data/PKUSketchRE-ID_V1/'
+            query_img, query_label = process_test(data_path, trial=trial, modal='visible')
+            gall_img, gall_label = process_test(data_path, trial=trial, modal='sk')
+
+            gallset = TestData(gall_img, gall_label, transform=transform_test, img_size=(args.img_w, args.img_h))
+            gall_loader = data.DataLoader(gallset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+            nquery = len(query_label)
+            ngall = len(gall_label)
+            queryset = TestData(query_img, query_label, transform=transform_test, img_size=(args.img_w, args.img_h))
+            query_loader = data.DataLoader(queryset, batch_size=args.test_batch, shuffle=False, num_workers=4)
+            query_feat_fc = extract_query_feat(model,query_loader,nquery)
+            # for trial in range(1):
+            ngall = len(gall_label)
+            gall_feat_fc = extract_gall_feat(model,gall_loader,ngall)
+            # fc feature
+            distmat = np.matmul(query_feat_fc, np.transpose(gall_feat_fc))
+            cmc, mAP, mINP = eval_PKU(-distmat, query_label, gall_label)
+            
+            print('Test Trial: {}'.format(trial))
+            print(
+                'FC:   Rank-1: {:.2%} | Rank-5: {:.2%} | Rank-10: {:.2%}| Rank-20: {:.2%}| mAP: {:.2%}| mINP: {:.2%}'.format(
+                    cmc[0], cmc[4], cmc[9], cmc[19], mAP, mINP))
+            is_best = (cmc[0] > best_mAP)
+            best_mAP = max(cmc[0], best_mAP)
+            save_checkpoint({
+                'state_dict': model.state_dict(),
+                'epoch': epoch + 1,
+                'best_mAP': cmc[0],
+            }, is_best, fpath=osp.join(args.logs_dir, 'checkpoint.pth.tar'))
+            
+            print('\n * Finished epoch {:3d}  model mAP: {:5.1%}  best: {:5.1%}{}\n'.
+                  format(epoch, mAP, best_mAP, ' *' if is_best else ''))
+            
+        lr_scheduler.step()
+            
+    end_time = time.monotonic()
+    print('Total running time: ', timedelta(seconds=end_time - start_time))
 
     print("done")
 
@@ -373,7 +603,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dataset', type=str, default='dukemtmcreid',
                         choices=datasets.names())
     parser.add_argument('-b', '--batch-size', type=int, default=2)
-    parser.add_argument('-j', '--workers', type=int, default=4)
+    parser.add_argument('-j', '--workers', type=int, default=1)
     parser.add_argument('--height', type=int, default=288, help="input height")#288 384
     parser.add_argument('--width', type=int, default=144, help="input width")#144 128
     parser.add_argument('--num-instances', type=int, default=4,
@@ -403,13 +633,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.00035,
                         help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--iters', type=int, default=400)
     parser.add_argument('--step-size', type=int, default=20)
     # training configs
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--print-freq', type=int, default=10)
-    parser.add_argument('--eval-step', type=int, default=1)
+    parser.add_argument('--eval-step', type=int, default=10)
     parser.add_argument('--temp', type=float, default=0.05,
                         help="temperature for scaling contrastive loss")
     # path
@@ -424,6 +654,5 @@ if __name__ == '__main__':
     parser.add_argument('--warmup-step', type=int, default=0)
     parser.add_argument('--milestones', nargs='+', type=int, default=[20,40],
                         help='milestones for the learning rate decay')
-
 
     main()
